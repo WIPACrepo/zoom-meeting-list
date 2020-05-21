@@ -49,6 +49,7 @@ LOG = logging.getLogger(__name__)
 
 async def get_zoom_user_list(token: str, max_page_size: int) -> List[str]:
     """Query the Zoom API to get a list of users on our Zoom account."""
+    LOG.debug("Querying Zoom for users")
     conn = http.client.HTTPSConnection("api.zoom.us")
     headers = {
         'authorization': f"Bearer {token}",
@@ -62,11 +63,13 @@ async def get_zoom_user_list(token: str, max_page_size: int) -> List[str]:
     user_list = []
     for user in users:
         user_list.append(user["email"])
+    LOG.debug(f"Found {len(user_list)} users; {user_list}")
     return user_list
 
 
 async def get_upcoming_meetings_for_zoom_user(token: str, zoom_user: str, max_page_size: int) -> List[MeetingType]:
     """Query the Zoom API to get the list of upcoming meetings for the provided user."""
+    LOG.debug(f"Querying Zoom for upcoming meetings for user {zoom_user}")
     conn = http.client.HTTPSConnection("api.zoom.us")
     headers = {
         'authorization': f"Bearer {token}",
@@ -81,21 +84,25 @@ async def get_upcoming_meetings_for_zoom_user(token: str, zoom_user: str, max_pa
     for meeting in meetings:
         meeting["user"] = zoom_user
         meeting_list.append(meeting)
+    LOG.debug(f"Found {len(meeting_list)} meetings for user {zoom_user}; {meeting_list}")
     return meeting_list
 
 
 async def get_all_upcoming_zoom_meetings(token: str, max_page_size: int) -> List[MeetingType]:
     """Query the Zoom API to get a list of all upcoming meetings for all users."""
+    LOG.debug("Querying Zoom for all upcoming meetings for all users")
     users = await get_zoom_user_list(token, max_page_size)
     meetings = []
     for user in users:
         upcoming_meetings = await get_upcoming_meetings_for_zoom_user(token, user, max_page_size)
         meetings.extend(upcoming_meetings)
+    LOG.debug(f"Found {len(meetings)} zoom meetings for all users")
     return meetings
 
 
 def filter_and_sort_zoom_meetings(meetings: List[MeetingType], max_days: int) -> List[MeetingType]:
     """Filter and sort the meetings into something sensible."""
+    LOG.debug(f"Filtering and sorting {len(meetings)} zoom meetings")
     # --------------------------------------------------------------------------
     # Zoom API Documentation
     # Meeting Types:
@@ -116,6 +123,7 @@ def filter_and_sort_zoom_meetings(meetings: List[MeetingType], max_days: int) ->
     # next, sort the meetings by their start_time
     sync_meetings = sorted(sync_meetings, key=itemgetter("start_time"))
     # return the filtered and sorted meetings to the caller
+    LOG.debug(f"Returning {len(sync_meetings)} after filtering and sorting; {sync_meetings}")
     return sync_meetings
 
 
@@ -131,22 +139,27 @@ def print_zoom_meetings_as_json(meetings: List[Dict[str, str]]) -> None:
 
 def get_google_calendar_service() -> Any:
     """Query the Google Calendar API for a list of upcoming events."""
+    LOG.debug("Establishing credentials to use Google API")
     creds = None
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
     if os.path.exists('token.pickle'):
+        LOG.debug("Loading API credentials from token.pickle")
         with open('token.pickle', 'rb') as token:
             creds = pickle.load(token)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
+            LOG.debug("Refreshing expired API credentials")
             creds.refresh(Request())
         else:
+            LOG.debug("Loading credentials.json with client secret to obtain API credentials")
             flow = InstalledAppFlow.from_client_secrets_file(
                 'credentials.json', GOOGLE_SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
+        LOG.debug("Writing API credentials to token.pickle")
         with open('token.pickle', 'wb') as token:
             pickle.dump(creds, token)
     # build the service object to query the Calendar API
@@ -162,13 +175,14 @@ async def get_all_google_events(service: Any,
     # query the Calendar API
     now = datetime.utcnow().isoformat() + 'Z'  # 'Z' indicates UTC time
     three_months_ago = subtract_three_months(now)
-    print(f'Getting the upcoming {maxResults} events from {three_months_ago} ...')
+    LOG.debug(f"Requesting {maxResults} Google Calendar events starting from {three_months_ago}")
     events_result = service.events().list(calendarId=calendarId,
                                           timeMin=three_months_ago,
                                           maxResults=maxResults,
                                           singleEvents=True,
                                           orderBy='startTime').execute()
     events = events_result.get('items', [])
+    LOG.debug(f"Found {len(events)} Google Calendar events")
     return cast(List[EventType], events)
 
 
@@ -239,6 +253,7 @@ def as_calendar_event(meeting: MeetingType) -> EventType:
 
 
 def configure_logging() -> None:
+    """Configure the logging object according to the supplied configuration."""
     # figure out how we want to configure the logging for the service daemon
     config = from_environment(EXPECTED_CONFIG)
     format = config["LOGGING_FORMAT"]
@@ -263,6 +278,7 @@ def get_corresponding_event(events: List[EventType], meeting: MeetingType) -> Op
 
 
 def log_configuration() -> None:
+    """Write the daemon configuration to the log."""
     # log the way this component has been configured
     config = from_environment(EXPECTED_CONFIG)
     LOG.info("Zoom Meeting List is configured:")
@@ -332,6 +348,7 @@ async def sync_zoom_to_google() -> None:
 
 
 async def work_loop() -> None:
+    """Perform the synchronization task and sleep the configured number of seconds."""
     # configure the work loop
     config = from_environment(EXPECTED_CONFIG)
     run_once_and_die = config["RUN_ONCE_AND_DIE"]
