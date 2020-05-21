@@ -8,10 +8,7 @@ COPY zml /usr/src/zml/zml
 RUN pip3 install --no-cache-dir -r /usr/src/zml/requirements.txt
 
 RUN addgroup -S app && adduser -S -u 1000 -g app app
-
-# USER app
-
-# COPY --chown=app token.pickle /usr/src/zml/
+USER app
 
 WORKDIR /usr/src/zml
 CMD ["python3", "-c", "print('Hello, ZML!')"]
