@@ -25,6 +25,8 @@ MeetingType = Dict[str, Any]
 
 EXPECTED_CONFIG = {
     "CALENDAR_ID": "wisc.edu_7ngpdt69gv42oehujek6hfvfu0@group.calendar.google.com",
+    "GOOGLE_API_CREDS_PATH": "token.pickle",
+    "GOOGLE_CLIENT_CREDS_PATH": "credentials.json",
     "LOGGING_FORMAT": "%(asctime)-15s [%(threadName)s] %(levelname)s (%(filename)s:%(lineno)d) - %(message)s",
     "LOGGING_LEVEL": "INFO",
     "MAX_DAYS": 90,
@@ -140,13 +142,18 @@ def print_zoom_meetings_as_json(meetings: List[Dict[str, str]]) -> None:
 def get_google_calendar_service() -> Any:
     """Query the Google Calendar API for a list of upcoming events."""
     LOG.debug("Establishing credentials to use Google API")
+    # load the paths from the configuration
+    config = from_environment(EXPECTED_CONFIG)
+    api_creds_path = config["GOOGLE_API_CREDS_PATH"]
+    client_creds_path = config["GOOGLE_CLIENT_CREDS_PATH"]
+
     creds = None
     # The file token.pickle stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
-    if os.path.exists('token.pickle'):
-        LOG.debug("Loading API credentials from token.pickle")
-        with open('token.pickle', 'rb') as token:
+    if os.path.exists(api_creds_path):
+        LOG.debug(f"Loading API credentials from {api_creds_path}")
+        with open(api_creds_path, 'rb') as token:
             creds = pickle.load(token)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
@@ -154,13 +161,12 @@ def get_google_calendar_service() -> Any:
             LOG.debug("Refreshing expired API credentials")
             creds.refresh(Request())
         else:
-            LOG.debug("Loading credentials.json with client secret to obtain API credentials")
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', GOOGLE_SCOPES)
+            LOG.debug(f"Loading {client_creds_path} with client secret to obtain API credentials")
+            flow = InstalledAppFlow.from_client_secrets_file(client_creds_path, GOOGLE_SCOPES)
             creds = flow.run_local_server(port=0)
         # Save the credentials for the next run
-        LOG.debug("Writing API credentials to token.pickle")
-        with open('token.pickle', 'wb') as token:
+        LOG.debug(f"Writing API credentials to {api_creds_path}")
+        with open(api_creds_path, 'wb') as token:
             pickle.dump(creds, token)
     # build the service object to query the Calendar API
     service = build('calendar', 'v3', credentials=creds)
