@@ -1,49 +1,78 @@
 #!/usr/bin/env python
+"""Setup."""
 
-import os
-import sys
+# fmt:off
+
 import glob
-
-if sys.version_info < (3, 6):
-    print('ERROR: ZML requires at least Python 3.6+ to run.')
-    sys.exit(1)
+import os
+import re
+import sys
+from typing import Any, Dict, List
 
 try:
     # Use setuptools if available, for install_requires (among other things).
-    import setuptools
+    import setuptools  # type: ignore[import]
     from setuptools import setup
 except ImportError:
     setuptools = None
     from distutils.core import setup
 
-kwargs = {}
 
-current_path = os.path.dirname(os.path.realpath(__file__))
+HERE = os.path.dirname(os.path.realpath(__file__))
+REQUIREMENTS_PATH = os.path.join(HERE, "requirements.txt")
+REQUIREMENTS = open(REQUIREMENTS_PATH).read().splitlines()
+kwargs: Dict[str, Any] = {}
 
-with open(os.path.join(current_path, 'zml', '__init__.py')) as f:
+
+if sys.version_info < (3, 6):
+    print('ERROR: ZML requires at least Python 3.6+ to run.')
+    sys.exit(1)
+
+
+# --------------------------------------------------------------------------------------
+
+
+with open(os.path.join(HERE, 'zml', '__init__.py')) as f:
     for line in f.readlines():
         if '__version__' in line:
-            kwargs['version'] = line.split('=')[-1].split('\'')[1]
+            # grab "X.Y.Z" from "__version__ = 'X.Y.Z'" (quote-style insensitive)
+            kwargs["version"] = line.replace('"', "'").split("=")[-1].split("'")[1]
             break
     else:
         raise Exception('cannot find __version__')
 
-with open(os.path.join(current_path, 'README.md')) as f:
+with open(os.path.join(HERE, 'README.md')) as f:
     kwargs['long_description'] = f.read()
+
+
+def _get_pypi_requirements() -> List[str]:
+    return [
+        m.replace("==", ">=")
+        for m in REQUIREMENTS
+        if ("git+" not in m) and ("pytest" not in m)
+    ]
+
+
+def _get_git_requirements() -> List[str]:
+    def valid(req: str) -> bool:
+        pat = r"^git\+https://github\.com/[^/]+/[^/]+@(v)?\d+\.\d+\.\d+#egg=\w+$"
+        if not re.match(pat, req):
+            raise Exception(
+                f"from {REQUIREMENTS_PATH}: "
+                f"pip-install git-package url is not in standardized format {pat} ({req})"
+            )
+        return True
+
+    return [m.replace("git+", "") for m in REQUIREMENTS if "git+" in m and valid(m)]
+
+
+# --------------------------------------------------------------------------------------
+
 
 if setuptools is not None:
     # If setuptools is not available, you're on your own for dependencies.
-    install_requires = [
-        'coverage>=4.4.2',
-        'PyJWT',
-        'pymongo',
-        'requests',
-        'requests_toolbelt',
-        'requests-futures',
-        'sphinx>=1.4',
-        'tornado>=5.1'
-    ]
-    kwargs['install_requires'] = install_requires
+    kwargs["install_requires"] = _get_pypi_requirements()
+    kwargs["dependency_links"] = _get_git_requirements()
     kwargs['zip_safe'] = False
 
 setup(
