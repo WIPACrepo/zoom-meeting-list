@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
+import glob
 import os
 import sys
-import glob
 
 if sys.version_info < (3, 6):
-    print('ERROR: ZML requires at least Python 3.6+ to run.')
+    print("ERROR: ZML requires at least Python 3.6+ to run.")
     sys.exit(1)
 
 try:
@@ -20,36 +20,36 @@ kwargs = {}
 
 current_path = os.path.dirname(os.path.realpath(__file__))
 
-with open(os.path.join(current_path, 'zml', '__init__.py')) as f:
+with open(os.path.join(current_path, "zml", "__init__.py")) as f:
     for line in f.readlines():
-        if '__version__' in line:
-            kwargs['version'] = line.split('=')[-1].split('\'')[1]
+        if "__version__" in line:
+            kwargs["version"] = line.split("=")[-1].split("'")[1]
             break
     else:
-        raise Exception('cannot find __version__')
+        raise Exception("cannot find __version__")
 
-with open(os.path.join(current_path, 'README.md')) as f:
-    kwargs['long_description'] = f.read()
+with open(os.path.join(current_path, "README.md")) as f:
+    kwargs["long_description"] = f.read()
 
 if setuptools is not None:
     # If setuptools is not available, you're on your own for dependencies.
     install_requires = [
-        'coverage>=4.4.2',
-        'PyJWT',
-        'pymongo',
-        'requests',
-        'requests_toolbelt',
-        'requests-futures',
-        'sphinx>=1.4',
-        'tornado>=5.1'
+        "coverage>=4.4.2",
+        "PyJWT",
+        "pymongo",
+        "requests",
+        "requests_toolbelt",
+        "requests-futures",
+        "sphinx>=1.4",
+        "tornado>=5.1",
     ]
-    kwargs['install_requires'] = install_requires
-    kwargs['zip_safe'] = False
+    kwargs["install_requires"] = install_requires
+    kwargs["zip_safe"] = False
 
 setup(
-    name='zml',
-    scripts=glob.glob('bin/*'),
-    packages=['zml'],
+    name="zml",
+    scripts=glob.glob("bin/*"),
+    packages=["zml"],
     package_data={
         # data files need to be listed both here (which determines what gets
         # installed) and in MANIFEST.in (which determines what gets included
@@ -66,15 +66,13 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 3 - Alpha',
-
-        'Operating System :: POSIX :: Linux',
-        'Topic :: System :: Distributed Computing',
-
-        'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: Implementation :: CPython',
+        "Development Status :: 3 - Alpha",
+        "Operating System :: POSIX :: Linux",
+        "Topic :: System :: Distributed Computing",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: Implementation :: CPython",
     ],
     **kwargs
 )
