@@ -1,0 +1,12 @@
+name: 'test release'
+
+on:
+  release:
+
+jobs:
+  echo:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Test
+      run: |
+        echo "this is a test of a release. tag=$GITHUB_REF"
