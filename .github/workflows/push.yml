@@ -6,6 +6,7 @@ on:
       - master
     tags:
       - 'v*.*.*'
+  release
 
 jobs:
   build:
