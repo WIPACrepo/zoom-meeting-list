@@ -29,7 +29,8 @@ jobs:
         tag-sha: true
         tag-semver: |
             {{raw}}
-            v{{major}}.{{minor}}
+            {{major}}.{{minor}}
+            {{major}}.{{minor}}.{{patch}}
 
     - name: Set up Docker Buildx
       id: buildx

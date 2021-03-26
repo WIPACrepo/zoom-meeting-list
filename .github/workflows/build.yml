@@ -1,4 +1,4 @@
-name: 'Docker'
+name: 'Docker Dry Run'
 
 on:
   pull_request:
