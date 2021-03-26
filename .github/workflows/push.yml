@@ -27,6 +27,9 @@ jobs:
           wipac/zoom-meeting-list
         # add git short SHA as Docker tag
         tag-sha: true
+        tag-semver: |
+            {{raw}}
+            v{{major}}.{{minor}}
 
     - name: Set up Docker Buildx
       id: buildx
